@@ -100,12 +100,18 @@ class AudioLoader:
 
         if path != "none":
             if offset is None:
-                signal = AudioSignal.salient_excerpt(
-                    path,
-                    duration=duration,
-                    state=state,
-                    loudness_cutoff=loudness_cutoff,
-                )
+                try:
+                    signal = AudioSignal.salient_excerpt(
+                        path,
+                        duration=duration,
+                        state=state,
+                        loudness_cutoff=loudness_cutoff,
+                    )
+                except RuntimeError as e:
+                    if "RuntimeError: The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1" in str(e):
+                        return None
+                    else:
+                        raise e
             else:
                 signal = AudioSignal(
                     path,
