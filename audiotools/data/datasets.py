@@ -109,6 +109,7 @@ class AudioLoader:
                     )
                 except RuntimeError as e:
                     if "RuntimeError: The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1" in str(e):
+                        print(f"Error loading audio at {path}. Skipping...")
                         return None
                     else:
                         raise e
