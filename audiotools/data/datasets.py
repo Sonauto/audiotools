@@ -3,6 +3,7 @@ from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Union
+import soundfile
 
 import numpy as np
 from torch.utils.data import SequentialSampler
@@ -107,8 +108,8 @@ class AudioLoader:
                         state=state,
                         loudness_cutoff=loudness_cutoff,
                     )
-                except RuntimeError as e:
-                    if "The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1" in str(e):
+                except (RuntimeError, soundfile.LibsndfileError) as e:
+                    if isinstance(e, soundfile.LibsndfileError) or "The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1" in str(e):
                         print(f"Error loading audio at {path}. Skipping...")
                         with open("/tmp/corrupt.txt", "a+") as file:
                             file.write(f"{path}\n")
