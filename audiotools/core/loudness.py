@@ -97,6 +97,7 @@ class Meter(torch.nn.Module):
 
         data = data.permute(0, 2, 1)
         data = data[:, :nt, :]
+        data = data.reshape(nb, nt, nch)
         return data
 
     def apply_filter_cpu(self, data: torch.Tensor):
