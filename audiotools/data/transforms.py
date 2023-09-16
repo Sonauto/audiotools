@@ -1000,7 +1000,11 @@ class VolumeNorm(BaseTransform):
         return {"db": util.sample_from_dist(self.db, state)}
 
     def _transform(self, signal, db):
-        return signal.normalize(db)
+        meta_loudness = signal.metadata["meta_loudness"]
+        if meta_loudness is None:
+            return signal.normalize(db)
+        else:
+            return signal.normalize(db, meta_loudness)
 
 
 class GlobalVolumeNorm(BaseTransform):

@@ -127,6 +127,7 @@ class AudioSignal(
         offset: float = 0,
         duration: float = None,
         device: str = None,
+        meta_loudness: float = None,
     ):
         audio_path = None
         audio_array = None
@@ -164,6 +165,7 @@ class AudioSignal(
         self.metadata = {
             "offset": offset,
             "duration": duration,
+            "meta_loudness": meta_loudness,
         }
 
     @property
