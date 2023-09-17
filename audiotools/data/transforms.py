@@ -1055,6 +1055,7 @@ class GlobalVolumeNorm(BaseTransform):
             db_change = 0.0
         else:
             db = util.sample_from_dist(self.db, state)
+            print(float(signal.metadata["loudness"]))
             db_change = db - float(signal.metadata["loudness"])
 
         return {"db": db_change}
