@@ -107,7 +107,7 @@ class AudioLoader:
                         duration=duration,
                         state=state,
                         loudness_cutoff=loudness_cutoff,
-                        meta_loudness=audio_info.get("loudness", None),
+                        meta_loudness=audio_info["loudness"],
                     )
                 except (RuntimeError, soundfile.LibsndfileError) as e:
                     if isinstance(e, soundfile.LibsndfileError) or "The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1" in str(e) or "is empty!" in str(e):
@@ -121,7 +121,7 @@ class AudioLoader:
                     path,
                     offset=offset,
                     duration=duration,
-                    meta_loudness=audio_info.get("loudness", None),
+                    meta_loudness=audio_info["loudness"],
                 )
 
         if num_channels == 1:
