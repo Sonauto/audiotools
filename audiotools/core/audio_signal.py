@@ -162,13 +162,11 @@ class AudioSignal(
         self.window = None
         self.stft_params = stft_params
 
-        print(meta_loudness)
         self.metadata = {
             "offset": offset,
             "duration": duration,
             "meta_loudness": meta_loudness if meta_loudness and meta_loudness != -float("inf") and meta_loudness != "-inf" else None,
         }
-        print(self.metadata)
 
     @property
     def path_to_input_file(
