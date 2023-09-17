@@ -1002,6 +1002,7 @@ class VolumeNorm(BaseTransform):
     def _transform(self, signal, db):
         meta_loudness = signal.metadata["meta_loudness"]
         if meta_loudness is None:
+            print("NOT NOT NOT using meta loudness")
             return signal.normalize(db)
         else:
             print("Using meta loudness")
