@@ -102,7 +102,7 @@ class AudioLoader:
         if path != "none":
             if offset is None:
                 try:
-                    print("LOOUDNESS: " + str(audio_info["loudness"]))
+                    # print("LOOUDNESS: " + str(audio_info["loudness"]))
                     signal = AudioSignal.salient_excerpt(
                         path,
                         duration=duration,
