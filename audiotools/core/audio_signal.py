@@ -127,7 +127,6 @@ class AudioSignal(
         offset: float = 0,
         duration: float = None,
         device: str = None,
-        meta_loudness: float = None,
     ):
         audio_path = None
         audio_array = None
@@ -165,7 +164,6 @@ class AudioSignal(
         self.metadata = {
             "offset": offset,
             "duration": duration,
-            "meta_loudness": meta_loudness if meta_loudness and meta_loudness != -float("inf") and meta_loudness != "-inf" else None,
         }
 
     @property
@@ -464,12 +462,9 @@ class AudioSignal(
         audio_data = torch.cat([x.audio_data for x in audio_signals], dim=dim)
         audio_paths = [x.path_to_file for x in audio_signals]
 
-        meta_loudnesses = [x.metadata["meta_loudness"] for x in audio_signals]
-
         batched_signal = cls(
             audio_data,
             sample_rate=audio_signals[0].sample_rate,
-            meta_loudness=meta_loudnesses,
         )
         batched_signal.path_to_file = audio_paths
         return batched_signal

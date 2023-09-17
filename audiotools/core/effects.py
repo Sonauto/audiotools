@@ -197,7 +197,7 @@ class EffectMixin:
         self.audio_data = self.audio_data * peak_gain
         return self
 
-    def normalize(self, db: typing.Union[torch.Tensor, np.ndarray, float] = -24.0, ref_db=None):
+    def normalize(self, db: typing.Union[torch.Tensor, np.ndarray, float] = -24.0):
         """Normalizes the signal's volume to the specified db, in LUFS.
         This is GPU-compatible, making for very fast loudness normalization.
 
@@ -212,8 +212,7 @@ class EffectMixin:
             Normalized audio signal.
         """
         db = util.ensure_tensor(db).to(self.device)
-        if ref_db is None:
-            ref_db = self.loudness()
+        ref_db = self.loudness()
         gain = db - ref_db
         gain = torch.exp(gain * self.GAIN_FACTOR)
 
