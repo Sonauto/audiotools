@@ -129,6 +129,7 @@ class AudioSignal(
         device: str = None,
         meta_loudness: float = None,
     ):
+        self.meta_loudness = meta_loudness
         audio_path = None
         audio_array = None
 
