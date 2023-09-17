@@ -165,7 +165,7 @@ class AudioSignal(
         self.metadata = {
             "offset": offset,
             "duration": duration,
-            "meta_loudness": meta_loudness,
+            "meta_loudness": meta_loudness if meta_loudness and meta_loudness != -float("inf") and meta_loudness != "-inf" else None,
         }
 
     @property
