@@ -112,7 +112,10 @@ class AudioLoader:
                     if isinstance(e, soundfile.LibsndfileError) or "The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1" in str(e) or "is empty!" in str(e):
                         print(f"Error loading audio at {path}. Skipping...")
                         with open("/tmp/corrupt.txt", "a+") as file:
-                            file.write(f"{path}\n")
+                            try:
+                                file.write(f"{path}\n")
+                            except UnicodeEncodeError:
+                                pass
                     else:
                         raise e
             else:
