@@ -219,7 +219,7 @@ def _close_temp_files(tmpfiles: list):
     _close()
 
 
-AUDIO_EXTENSIONS = [".wav", ".flac", ".mp3", ".mp4"]
+AUDIO_EXTENSIONS = [".wav", ".flac", ".mp3", ".mp4", ".ogg"]
 
 
 def find_audio(folder: str, ext: List[str] = AUDIO_EXTENSIONS):

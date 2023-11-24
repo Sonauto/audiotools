@@ -1,5 +1,10 @@
+from functools import partial
+import json
+import os
 from pathlib import Path
-from typing import Callable
+import re
+import tempfile
+from typing import Any, Callable, Optional, Sequence
 from typing import Dict
 from typing import List
 from typing import Union
@@ -8,6 +13,7 @@ import soundfile
 import numpy as np
 from torch.utils.data import SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
+import webdataset as wds
 
 from ..core import AudioSignal
 from ..core import util
@@ -527,3 +533,117 @@ class ResumableSequentialSampler(SequentialSampler):  # pragma: no cover
             if i >= self.start_idx:
                 yield idx
         self.start_idx = 0  # set the index back to 0 so for the next epoch
+
+def log_and_continue(exn):
+    print(f"Handling webdataset error ({repr(exn)}). Ignoring.")
+    return True
+
+def decode_json(key, value):
+    if "json" in key:
+        return json.loads(value)
+
+def decode_audiosignal(key, value, offset=None, duration=None, state=None, loudness_cutoff=-40, num_channels=1, sample_rate=44100):
+    extension = "." + re.sub(r".*[.]", "", key)
+    if extension not in util.AUDIO_EXTENSIONS:
+        return None
+
+    with tempfile.TemporaryDirectory() as dirname:
+        fname = os.path.join(dirname, f"file.{extension}")
+        with open(fname, "wb") as stream:
+            stream.write(value)
+        if offset is None:
+            try:
+                signal = AudioSignal.salient_excerpt(
+                    fname,
+                    duration=duration,
+                    state=state,
+                    loudness_cutoff=loudness_cutoff,
+                )
+            except (RuntimeError, soundfile.LibsndfileError) as e:
+                if isinstance(e, soundfile.LibsndfileError) or "The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1" in str(e) or "is empty!" in str(e):
+                    print(f"Error loading audio at {fname}. Skipping...")
+                else:
+                    raise e
+        else:
+            signal = AudioSignal(
+                fname,
+                offset=offset,
+                duration=duration,
+            )
+
+    if num_channels == 1:
+        signal = signal.to_mono()
+    signal = signal.resample(sample_rate)
+
+    if signal.duration < duration:
+        signal = signal.zero_pad_to(int(duration * sample_rate))
+    return signal
+
+def combine_json(data: Dict[str, Any]):
+    for k, v in data["json"].items():
+        data["ogg"].metadata[k] = v
+    return {"audio": data["ogg"]}
+
+def add_transform_args(data: Dict[str, Any], transform=None, state=None):
+    data["transform_args"] = transform.instantiate(state, signal=data["signal"])
+    return data
+
+class CustomWebDataset(wds.WebDataset):
+    def __init__(
+        self,
+        urls: Union[str, Sequence[str]],
+        batch_size: Optional[int] = None,
+        shuffle: Optional[int] = None,
+        resampled: bool = True,  # use shardlists.ResampledShards
+        duration: float = 5.0,
+        loudness_cutoff: int = -40,
+        num_channels: int = 1,
+        sample_rate: int = 44100,
+        state: Optional[np.random.RandomState] = None,
+        transform: Optional[Callable] = None,
+        **kwargs,
+    ):
+        super().__init__(
+            urls=urls,
+            resampled=resampled,
+            handler=log_and_continue,
+            nodesplitter=wds.shardlists.split_by_node
+            if not resampled
+            else wds.shardlists.single_node_only,
+            **kwargs,
+        )
+
+        _decode_audiosignal = partial(decode_audiosignal, duration=duration, loudness_cutoff=loudness_cutoff, num_channels=num_channels, sample_rate=sample_rate, state=state)
+        self.decode(_decode_audiosignal, decode_json)
+        self.map(combine_json, handler=log_and_continue)
+
+        if transform is not None:
+            _add_transform_args = partial(add_transform_args, transform=transform, state=state)
+            self.map(_add_transform_args, handler=log_and_continue)
+
+        if shuffle is not None:
+            self.shuffle(shuffle)
+
+        if batch_size is not None:
+            self.batched(batch_size, collation_fn=util.collate)
+
+
+class CustomWebDataloader(wds.WebLoader):
+    def __init__(
+        self,
+        dataset: CustomWebDataset,
+        num_workers: int = 8,
+        epoch_steps: Optional[int] = None,
+    ):
+        if epoch_steps:
+            dataset = dataset.with_epoch(
+                epoch_steps // num_workers if num_workers > 0 else epoch_steps
+            )
+
+        super().__init__(
+            dataset,
+            num_workers=num_workers,
+            shuffle=False,
+            pin_memory=True,
+            batch_size=None,
+        )
