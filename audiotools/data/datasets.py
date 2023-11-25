@@ -115,7 +115,12 @@ class AudioLoader:
                         loudness_cutoff=loudness_cutoff,
                     )
                 except (RuntimeError, soundfile.LibsndfileError) as e:
-                    if isinstance(e, soundfile.LibsndfileError) or "The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1" in str(e) or "is empty!" in str(e):
+                    if (
+                        isinstance(e, soundfile.LibsndfileError)
+                        or "The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1"
+                        in str(e)
+                        or "is empty!" in str(e)
+                    ):
                         print(f"Error loading audio at {path}. Skipping...")
                         with open("/tmp/corrupt.txt", "a+") as file:
                             try:
@@ -534,15 +539,27 @@ class ResumableSequentialSampler(SequentialSampler):  # pragma: no cover
                 yield idx
         self.start_idx = 0  # set the index back to 0 so for the next epoch
 
+
 def log_and_continue(exn):
     print(f"Handling webdataset error ({repr(exn)}). Ignoring.")
     return True
+
 
 def decode_json(key, value):
     if "json" in key:
         return json.loads(value)
 
-def decode_audiosignal(key, value, offset=None, duration=None, state=None, loudness_cutoff=-40, num_channels=1, sample_rate=44100):
+
+def decode_audiosignal(
+    key,
+    value,
+    offset=None,
+    duration=None,
+    state=None,
+    loudness_cutoff=-40,
+    num_channels=1,
+    sample_rate=44100,
+):
     extension = "." + re.sub(r".*[.]", "", key)
     if extension not in util.AUDIO_EXTENSIONS:
         return None
@@ -560,7 +577,12 @@ def decode_audiosignal(key, value, offset=None, duration=None, state=None, loudn
                     loudness_cutoff=loudness_cutoff,
                 )
             except (RuntimeError, soundfile.LibsndfileError) as e:
-                if isinstance(e, soundfile.LibsndfileError) or "The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1" in str(e) or "is empty!" in str(e):
+                if (
+                    isinstance(e, soundfile.LibsndfileError)
+                    or "The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1"
+                    in str(e)
+                    or "is empty!" in str(e)
+                ):
                     print(f"Error loading audio at {fname}. Skipping...")
                 else:
                     raise e
@@ -579,14 +601,18 @@ def decode_audiosignal(key, value, offset=None, duration=None, state=None, loudn
         signal = signal.zero_pad_to(int(duration * sample_rate))
     return signal
 
+
 def combine_json(data: Dict[str, Any]):
+    audio_key = [k for k in data.keys() if "." + k in util.AUDIO_EXTENSIONS][0]
     for k, v in data["json"].items():
-        data["ogg"].metadata[k] = v
-    return {"audio": data["ogg"]}
+        data[audio_key].metadata[k] = v
+    return {"signal": data[audio_key]}
+
 
 def add_transform_args(data: Dict[str, Any], transform=None, state=None):
     data["transform_args"] = transform.instantiate(state, signal=data["signal"])
     return data
+
 
 class CustomWebDataset(wds.WebDataset):
     def __init__(
@@ -601,6 +627,7 @@ class CustomWebDataset(wds.WebDataset):
         sample_rate: int = 44100,
         state: Optional[np.random.RandomState] = None,
         transform: Optional[Callable] = None,
+        n_examples: int = 10_000_000,
         **kwargs,
     ):
         super().__init__(
@@ -612,20 +639,34 @@ class CustomWebDataset(wds.WebDataset):
             else wds.shardlists.single_node_only,
             **kwargs,
         )
+        self.n_examples = n_examples
+        self.collate = util.collate
 
-        _decode_audiosignal = partial(decode_audiosignal, duration=duration, loudness_cutoff=loudness_cutoff, num_channels=num_channels, sample_rate=sample_rate, state=state)
+        _decode_audiosignal = partial(
+            decode_audiosignal,
+            duration=duration,
+            loudness_cutoff=loudness_cutoff,
+            num_channels=num_channels,
+            sample_rate=sample_rate,
+            state=state,
+        )
         self.decode(_decode_audiosignal, decode_json)
         self.map(combine_json, handler=log_and_continue)
 
         if transform is not None:
-            _add_transform_args = partial(add_transform_args, transform=transform, state=state)
+            _add_transform_args = partial(
+                add_transform_args, transform=transform, state=state
+            )
             self.map(_add_transform_args, handler=log_and_continue)
 
         if shuffle is not None:
             self.shuffle(shuffle)
 
         if batch_size is not None:
-            self.batched(batch_size, collation_fn=util.collate)
+            self.batched(batch_size, collation_fn=self.collate)
+
+    def __len__(self):
+        return self.n_examples
 
 
 class CustomWebDataloader(wds.WebLoader):
@@ -635,6 +676,7 @@ class CustomWebDataloader(wds.WebLoader):
         num_workers: int = 8,
         epoch_steps: Optional[int] = None,
     ):
+        self.dataset = dataset
         if epoch_steps:
             dataset = dataset.with_epoch(
                 epoch_steps // num_workers if num_workers > 0 else epoch_steps
@@ -647,3 +689,6 @@ class CustomWebDataloader(wds.WebLoader):
             pin_memory=True,
             batch_size=None,
         )
+
+    def __len__(self):
+        return len(self.dataset)
