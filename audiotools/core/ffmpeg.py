@@ -38,8 +38,9 @@ def r128stats(filepath: str, quiet: bool):
     ]
     if quiet:
         ffargs += ["-hide_banner"]
-    proc = subprocess.Popen(ffargs, stderr=subprocess.PIPE, universal_newlines=True)
+    proc = subprocess.Popen(ffargs, stderr=subprocess.PIPE, universal_newlines=False)
     stats = proc.communicate()[1]
+    stats = stats.decode("utf-8", errors="ignore")
     summary_index = stats.rfind("Summary:")
 
     summary_list = stats[summary_index:].split()
