@@ -598,11 +598,15 @@ class AudioSignal(
         >>> signal.write("/tmp/original.wav").low_pass(4000).write("/tmp/lowpass.wav")
 
         """
-        if self.is_mid_side:
+        was_mid_side = self.is_mid_side
+        if was_mid_side:
             self.to_left_right()
         if self.audio_data[0].abs().max() > 1:
             warnings.warn("Audio amplitude > 1 clipped when saving")
         soundfile.write(str(audio_path), self.audio_data[0].numpy().T, self.sample_rate)
+
+        if was_mid_side:
+            self.to_mid_side()
 
         self.path_to_file = audio_path
         return self
