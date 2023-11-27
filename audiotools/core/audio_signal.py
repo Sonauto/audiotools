@@ -146,6 +146,7 @@ class AudioSignal(
             )
 
         self.path_to_file = None
+        self.is_mid_side = False
 
         self.audio_data = None
         self.sources = None  # List of AudioSignal objects.
@@ -597,6 +598,8 @@ class AudioSignal(
         >>> signal.write("/tmp/original.wav").low_pass(4000).write("/tmp/lowpass.wav")
 
         """
+        if self.is_mid_side:
+            self.to_left_right()
         if self.audio_data[0].abs().max() > 1:
             warnings.warn("Audio amplitude > 1 clipped when saving")
         soundfile.write(str(audio_path), self.audio_data[0].numpy().T, self.sample_rate)
@@ -710,7 +713,10 @@ class AudioSignal(
         AudioSignal
             AudioSignal with mean of channels.
         """
-        self.audio_data = self.audio_data.mean(1, keepdim=True)
+        if self.is_mid_side:
+            self.audio_data = self.audio_data[:, 0:1]
+        else:
+            self.audio_data = self.audio_data.mean(1, keepdim=True)
         return self
     
     def to_mid_side(self):
@@ -725,6 +731,7 @@ class AudioSignal(
         side = (self.audio_data[:, 0] - self.audio_data[:, 1]) / 2
         self.audio_data[:, 0] = mid
         self.audio_data[:, 1] = side
+        self.is_mid_side = True
         return self
     
 
@@ -741,6 +748,7 @@ class AudioSignal(
         right = self.audio_data[:, 0] - self.audio_data[:, 1]
         self.audio_data[:, 0] = left
         self.audio_data[:, 1] = right
+        self.is_mid_side = False
         return self
 
     def resample(self, sample_rate: int):
