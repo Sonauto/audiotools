@@ -1,6 +1,7 @@
 import copy
 import functools
 import hashlib
+import io
 import math
 import pathlib
 import tempfile
@@ -132,6 +133,8 @@ class AudioSignal(
         audio_array = None
 
         if isinstance(audio_path_or_array, str):
+            audio_path = audio_path_or_array
+        elif isinstance(audio_path_or_array, io.IOBase):
             audio_path = audio_path_or_array
         elif isinstance(audio_path_or_array, pathlib.Path):
             audio_path = audio_path_or_array
@@ -473,7 +476,7 @@ class AudioSignal(
     # I/O
     def load_from_file(
         self,
-        audio_path: typing.Union[str, Path],
+        audio_path: typing.Union[str, Path, typing.BinaryIO],
         offset: float,
         duration: float,
         device: str = "cpu",
@@ -521,7 +524,8 @@ class AudioSignal(
         self.original_signal_length = self.signal_length
 
         self.sample_rate = sample_rate
-        self.path_to_file = audio_path
+        if not isinstance(audio_path, io.IOBase):
+            self.path_to_file = audio_path
         return self.to(device)
 
     def load_from_array(

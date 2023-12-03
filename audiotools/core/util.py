@@ -30,7 +30,7 @@ class Info:
         return self.num_frames / self.sample_rate
 
 
-def info(audio_path: str):
+def info(audio_path: typing.Union[str, typing.BinaryIO]):
     """Shim for torchaudio.info to make 0.7.2 API match 0.8.0.
 
     Parameters
@@ -40,9 +40,9 @@ def info(audio_path: str):
     """
     # try default backend first, then fallback to soundfile
     try:
-        info = torchaudio.info(str(audio_path))
+        info = torchaudio.info(audio_path)
     except:  # pragma: no cover
-        info = torchaudio.backend.soundfile_backend.info(str(audio_path))
+        info = torchaudio.backend.soundfile_backend.info(audio_path)
 
     if isinstance(info, tuple):  # pragma: no cover
         signal_info = info[0]
