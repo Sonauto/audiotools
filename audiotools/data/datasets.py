@@ -541,6 +541,7 @@ class ResumableSequentialSampler(SequentialSampler):  # pragma: no cover
 
 
 def log_and_continue(exn):
+    raise exn
     print(f"Handling webdataset error ({repr(exn)}). Ignoring.")
     return True
 
@@ -551,8 +552,7 @@ def decode_json(key, value):
 
 
 def decode_audiosignal(
-    key,
-    value,
+    data: Dict[str, Any],
     offset=None,
     duration=None,
     state=None,
@@ -560,12 +560,15 @@ def decode_audiosignal(
     num_channels=1,
     sample_rate=44100,
 ):
-    extension = "." + re.sub(r".*[.]", "", key)
-    if extension not in util.AUDIO_EXTENSIONS:
-        return None
+    # audio_key = [k for k in data.keys() if any(k.endswith(x) for x in util.AUDIO_EXTENSIONS)][0]
+    # value = data[audio_key]
+    for key, value in data.items():
+        extension = "." + re.sub(r".*[.]", "", key)
+        if extension in util.AUDIO_EXTENSIONS:
+            break
 
     with tempfile.TemporaryDirectory() as dirname:
-        fname = os.path.join(dirname, f"file.{extension}")
+        fname = os.path.join(dirname, f"file{extension}")
         with open(fname, "wb") as stream:
             stream.write(value)
         if offset is None:
@@ -583,7 +586,8 @@ def decode_audiosignal(
                     in str(e)
                     or "is empty!" in str(e)
                 ):
-                    print(f"Error loading audio at {fname}. Skipping...")
+                    print(f"Error loading audio at {fname}. Value: {key} Skipping...")
+                    return None
                 else:
                     raise e
         else:
@@ -599,11 +603,15 @@ def decode_audiosignal(
 
     if signal.duration < duration:
         signal = signal.zero_pad_to(int(duration * sample_rate))
-    return signal
+    del data[key]
+    data["signal"] = signal
+    return data
 
 
 def combine_json(data: Dict[str, Any]):
-    audio_key = [k for k in data.keys() if "." + k in util.AUDIO_EXTENSIONS][0]
+    audio_key = "signal"
+    json_key = [k for k in data.keys() if "json" in k][0]
+    data["json"] = data.pop(json_key)
     for k, v in data["json"].items():
         data[audio_key].metadata[k] = v
     return {"signal": data[audio_key]}
@@ -650,7 +658,8 @@ class CustomWebDataset(wds.WebDataset):
             sample_rate=sample_rate,
             state=state,
         )
-        self.decode(_decode_audiosignal, decode_json)
+        self.decode(decode_json)
+        self.map(_decode_audiosignal, handler=log_and_continue)
         self.map(combine_json, handler=log_and_continue)
 
         if transform is not None:
