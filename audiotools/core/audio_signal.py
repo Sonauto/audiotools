@@ -215,6 +215,8 @@ class AudioSignal(
         >>> signal = AudioSignal.excerpt("path/to/audio", duration=5)
         """
         info = util.info(audio_path)
+        if isinstance(audio_path, io.IOBase):
+            audio_path.seek(0)
         total_duration = info.duration
 
         state = util.random_state(state)
