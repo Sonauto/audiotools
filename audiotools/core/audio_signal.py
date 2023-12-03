@@ -284,6 +284,8 @@ class AudioSignal(
             loudness = -np.inf
             num_try = 0
             while loudness <= loudness_cutoff:
+                if isinstance(audio_path, io.IOBase):
+                    audio_path.seek(0)
                 excerpt = cls.excerpt(audio_path, state=state, **kwargs)
                 loudness = excerpt.loudness()
                 num_try += 1

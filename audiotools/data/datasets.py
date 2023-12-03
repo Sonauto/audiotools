@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 import re
-import tempfile
+import io
 from typing import Any, Callable, Optional, Sequence
 from typing import Dict
 from typing import List
@@ -567,35 +567,32 @@ def decode_audiosignal(
         if extension in util.AUDIO_EXTENSIONS:
             break
 
-    with tempfile.TemporaryDirectory() as dirname:
-        fname = os.path.join(dirname, f"file{extension}")
-        with open(fname, "wb") as stream:
-            stream.write(value)
-        if offset is None:
-            try:
-                signal = AudioSignal.salient_excerpt(
-                    fname,
-                    duration=duration,
-                    state=state,
-                    loudness_cutoff=loudness_cutoff,
-                )
-            except (RuntimeError, soundfile.LibsndfileError) as e:
-                if (
-                    isinstance(e, soundfile.LibsndfileError)
-                    or "The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1"
-                    in str(e)
-                    or "is empty!" in str(e)
-                ):
-                    print(f"Error loading audio at {fname}. Value: {key} Skipping...")
-                    return None
-                else:
-                    raise e
-        else:
-            signal = AudioSignal(
-                fname,
-                offset=offset,
+    filelike = io.BytesIO(value)
+    if offset is None:
+        try:
+            signal = AudioSignal.salient_excerpt(
+                filelike,
                 duration=duration,
+                state=state,
+                loudness_cutoff=loudness_cutoff,
             )
+        except (RuntimeError, soundfile.LibsndfileError) as e:
+            if (
+                isinstance(e, soundfile.LibsndfileError)
+                or "The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1"
+                in str(e)
+                or "is empty!" in str(e)
+            ):
+                print(f"Error loading audio. Value: {key} Skipping...")
+                return None
+            else:
+                raise e
+    else:
+        signal = AudioSignal(
+            filelike,
+            offset=offset,
+            duration=duration,
+        )
 
     if num_channels == 1:
         signal = signal.to_mono()
