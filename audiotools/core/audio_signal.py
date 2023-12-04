@@ -255,7 +255,7 @@ class AudioSignal(
         duration_frames = int(duration * signal.sample_rate)
         signals = []
         if type(num_excerpts) is float:
-            num_excerpts = int(total_duration / duration * num_excerpts)
+            num_excerpts = math.ceil(total_duration / duration * num_excerpts)
             if max_excerpts is not None:
                 num_excerpts = min(num_excerpts, max_excerpts)
         for _ in range(num_excerpts):
