@@ -686,9 +686,7 @@ class CustomWebDataloader(wds.WebLoader):
     ):
         self.dataset = dataset
         if epoch_steps:
-            dataset = dataset.with_epoch(
-                epoch_steps // num_workers if num_workers > 0 else epoch_steps
-            )
+            dataset = dataset.with_epoch(epoch_steps)
 
         super().__init__(
             dataset,
