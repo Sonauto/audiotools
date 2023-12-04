@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import re
 import io
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence, Iterable
 from typing import Dict
 from typing import List
 from typing import Union
@@ -618,6 +618,30 @@ def add_transform_args(data: Dict[str, Any], transform=None, state=None):
     data["transform_args"] = transform.instantiate(state, signal=data["signal"])
     return data
 
+def custom_tarfile_samples(
+    src: Iterable[Dict[str, Any]],
+    handler: Callable[[Exception], bool] = wds.tariterators.reraise_exception,
+    select_files: Optional[Callable[[str], bool]] = None,
+    rename_files: Optional[Callable[[str], str]] = None,
+) -> Iterable[Dict[str, Any]]:
+    """Given a stream of tar files, yield samples.
+
+    Args:
+        src: stream of tar files
+        handler: exception handler
+        select_files: function that selects files to be included
+
+    Returns:
+        stream of samples
+    """
+    streams = wds.tariterators.url_opener(src, handler=handler)
+    files = wds.tariterators.tar_file_expander(
+        streams, handler=handler, select_files=select_files, rename_files=rename_files
+    )
+    samples = wds.tariterators.group_by_keys(files, handler=handler, keys=lambda path: path.rsplit(".", 1))
+    return samples
+
+custom_tarfile_to_samples = wds.filters.pipelinefilter(custom_tarfile_samples)
 
 class CustomWebDataset(wds.WebDataset):
     def __init__(
@@ -648,6 +672,12 @@ class CustomWebDataset(wds.WebDataset):
             else wds.shardlists.single_node_only,
             **kwargs,
         )
+        for idx, stage in enumerate(self.pipeline):
+            if isinstance(stage, wds.filters.FilterFunction):
+                self.pipeline.pop(idx)
+                break
+        self.pipeline.append(custom_tarfile_to_samples(handler=log_and_continue))
+
         self.n_examples = n_examples
         self.collate = util.collate
 
