@@ -562,10 +562,16 @@ def decode_audiosignal(
 ):
     assert offset is None
     for sample in data:
+        found_key = False
         for key, value in sample.items():
             extension = "." + re.sub(r".*[.]", "", key)
             if extension in util.AUDIO_EXTENSIONS:
+                found_key = True
                 break
+
+        if not found_key:
+            print(f"Warning: Failed to find audio key in sample with keys {sample.keys()}.")
+            continue
 
         filelike = io.BytesIO(value)
         try:
