@@ -271,7 +271,7 @@ class AudioSignal(
                         break
             signal_excerpt.metadata["offset"] = offset
             signal_excerpt.metadata["duration"] = duration
-            signals.append(signal)
+            signals.append(signal_excerpt)
 
         return cls.batch(signals)
 
