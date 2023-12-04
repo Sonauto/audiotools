@@ -238,6 +238,7 @@ class AudioSignal(
         num_tries: int = 8,
         state: typing.Union[np.random.RandomState, int] = None,
         num_excerpts: typing.Union[int, float] = 2,
+        max_excerpts: int = None,
         duration: float = None,
     ):
         state = util.random_state(state)
@@ -255,6 +256,8 @@ class AudioSignal(
         signals = []
         if type(num_excerpts) is float:
             num_excerpts = int(total_duration / duration * num_excerpts)
+            if max_excerpts is not None:
+                num_excerpts = min(num_excerpts, max_excerpts)
         for _ in range(num_excerpts):
             if loudness_cutoff is None:
                 offset = state.uniform(lower_bound, upper_bound)

@@ -559,6 +559,7 @@ def decode_audiosignal(
     num_channels=1,
     sample_rate=44100,
     num_excerpts=50,
+    max_excerpts=None,
 ):
     assert offset is None
     for sample in data:
@@ -581,6 +582,7 @@ def decode_audiosignal(
                 state=state,
                 loudness_cutoff=loudness_cutoff,
                 num_excerpts=num_excerpts,
+                max_excerpts=max_excerpts,
             )
         except (RuntimeError, soundfile.LibsndfileError) as e:
             if (
@@ -658,6 +660,7 @@ class CustomWebDataset(wds.WebDataset):
         transform: Optional[Callable] = None,
         n_examples: int = 10_000_000,
         num_excerpts: int = 50,
+        max_excerpts: Optional[int] = None,
         share_urls_between_workers: bool = False,
         **kwargs,
     ):
@@ -689,6 +692,7 @@ class CustomWebDataset(wds.WebDataset):
             sample_rate=sample_rate,
             state=state,
             num_excerpts=num_excerpts,
+            max_excerpts=max_excerpts,
         )
         self.decode(decode_json)
         self.compose(_decode_audiosignal)
