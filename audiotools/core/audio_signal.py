@@ -249,7 +249,7 @@ class AudioSignal(
         
         total_duration = info.duration
         state = util.random_state(state)
-        lower_bound = 0 if offset is None else offset
+        lower_bound = 0
         upper_bound = max(total_duration - duration, 0)
         duration_frames = int(duration * signal.sample_rate)
         signals = []
