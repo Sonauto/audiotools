@@ -552,29 +552,30 @@ def decode_json(key, value):
 
 
 def decode_audiosignal(
-    data: Dict[str, Any],
+    data: List[Dict[str, Any]],
     offset=None,
     duration=None,
     state=None,
     loudness_cutoff=-40,
     num_channels=1,
     sample_rate=44100,
+    num_excerpts=50,
 ):
-    # audio_key = [k for k in data.keys() if any(k.endswith(x) for x in util.AUDIO_EXTENSIONS)][0]
-    # value = data[audio_key]
-    for key, value in data.items():
-        extension = "." + re.sub(r".*[.]", "", key)
-        if extension in util.AUDIO_EXTENSIONS:
-            break
+    assert offset is None
+    for sample in data:
+        for key, value in sample.items():
+            extension = "." + re.sub(r".*[.]", "", key)
+            if extension in util.AUDIO_EXTENSIONS:
+                break
 
-    filelike = io.BytesIO(value)
-    if offset is None:
+        filelike = io.BytesIO(value)
         try:
-            signal = AudioSignal.salient_excerpt(
+            signals = AudioSignal.salient_excerpts(
                 filelike,
                 duration=duration,
                 state=state,
                 loudness_cutoff=loudness_cutoff,
+                num_excerpts=num_excerpts,
             )
         except (RuntimeError, soundfile.LibsndfileError) as e:
             if (
@@ -587,22 +588,16 @@ def decode_audiosignal(
                 return None
             else:
                 raise e
-    else:
-        signal = AudioSignal(
-            filelike,
-            offset=offset,
-            duration=duration,
-        )
 
-    if num_channels == 1:
-        signal = signal.to_mono()
-    signal = signal.resample(sample_rate)
+        if num_channels == 1:
+            signals = signals.to_mono()
+        signals = signals.resample(sample_rate)
 
-    if signal.duration < duration:
-        signal = signal.zero_pad_to(int(duration * sample_rate))
-    del data[key]
-    data["signal"] = signal
-    return data
+        if signals.duration < duration:
+            signals = signals.zero_pad_to(int(duration * sample_rate))
+        del sample[key]
+        for signal in signals:
+            yield {**sample, "signal": signal}
 
 
 def combine_json(data: Dict[str, Any]):
@@ -633,6 +628,7 @@ class CustomWebDataset(wds.WebDataset):
         state: Optional[np.random.RandomState] = None,
         transform: Optional[Callable] = None,
         n_examples: int = 10_000_000,
+        num_excerpts: int = 50,
         **kwargs,
     ):
         super().__init__(
@@ -654,9 +650,10 @@ class CustomWebDataset(wds.WebDataset):
             num_channels=num_channels,
             sample_rate=sample_rate,
             state=state,
+            num_excerpts=num_excerpts,
         )
         self.decode(decode_json)
-        self.map(_decode_audiosignal, handler=log_and_continue)
+        self.compose(_decode_audiosignal)
         self.map(combine_json, handler=log_and_continue)
 
         if transform is not None:

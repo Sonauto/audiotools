@@ -231,6 +231,51 @@ class AudioSignal(
         return signal
 
     @classmethod
+    def salient_excerpts(
+        cls,
+        audio_path: typing.Union[str, Path],
+        loudness_cutoff: float = None,
+        num_tries: int = 8,
+        state: typing.Union[np.random.RandomState, int] = None,
+        num_excerpts: int = 2,
+        duration: float = None,
+    ):
+        state = util.random_state(state)
+        info = util.info(audio_path)
+        if isinstance(audio_path, io.IOBase):
+            audio_path.seek(0)
+
+        signal = cls(audio_path)
+        
+        total_duration = info.duration
+        state = util.random_state(state)
+        lower_bound = 0 if offset is None else offset
+        upper_bound = max(total_duration - duration, 0)
+        duration_frames = int(duration * signal.sample_rate)
+        signals = []
+        for _ in range(num_excerpts):
+            if loudness_cutoff is None:
+                offset = state.uniform(lower_bound, upper_bound)
+                offset_frames = int(offset * signal.sample_rate)
+                signal_excerpt = signal[..., offset_frames:offset_frames+duration_frames]
+            else:
+                loudness = -np.inf
+                num_try = 0
+                while loudness <= loudness_cutoff:
+                    offset = state.uniform(lower_bound, upper_bound)
+                    offset_frames = int(offset * signal.sample_rate)
+                    signal_excerpt = signal[..., offset_frames:offset_frames+duration_frames]
+                    loudness = signal_excerpt.loudness()
+                    num_try += 1
+                    if num_tries is not None and num_try >= num_tries:
+                        break
+            signal_excerpt.metadata["offset"] = offset
+            signal_excerpt.metadata["duration"] = duration
+            signals.append(signal)
+
+        return cls.batch(signals)
+
+    @classmethod
     def salient_excerpt(
         cls,
         audio_path: typing.Union[str, Path],
