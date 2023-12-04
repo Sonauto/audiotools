@@ -634,8 +634,11 @@ class CustomWebDataset(wds.WebDataset):
         transform: Optional[Callable] = None,
         n_examples: int = 10_000_000,
         num_excerpts: int = 50,
+        share_urls_between_workers: bool = False,
         **kwargs,
     ):
+        if share_urls_between_workers:
+            urls = wds.shardlists.SimpleShardList(urls)
         super().__init__(
             urls=urls,
             resampled=resampled,
