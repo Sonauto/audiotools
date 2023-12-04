@@ -541,7 +541,6 @@ class ResumableSequentialSampler(SequentialSampler):  # pragma: no cover
 
 
 def log_and_continue(exn):
-    raise exn
     print(f"Handling webdataset error ({repr(exn)}). Ignoring.")
     return True
 
@@ -654,13 +653,13 @@ class CustomWebDataset(wds.WebDataset):
         )
         self.decode(decode_json)
         self.compose(_decode_audiosignal)
-        self.map(combine_json, handler=log_and_continue)
+        self.map(combine_json)
 
         if transform is not None:
             _add_transform_args = partial(
                 add_transform_args, transform=transform, state=state
             )
-            self.map(_add_transform_args, handler=log_and_continue)
+            self.map(_add_transform_args)
 
         if shuffle is not None:
             self.shuffle(shuffle)
