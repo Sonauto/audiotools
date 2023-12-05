@@ -709,7 +709,7 @@ class CustomWebDataset(wds.WebDataset):
             self.shuffle(shuffle)
 
         if batch_size is not None:
-            self.batched(batch_size, collation_fn=self.collate)
+            self.batched(batch_size, collation_fn=self.collate, partial=False)
 
     def __len__(self):
         return self.n_examples
