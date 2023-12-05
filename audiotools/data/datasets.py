@@ -720,6 +720,7 @@ class CustomWebDataloader(wds.WebLoader):
         dataset: CustomWebDataset,
         num_workers: int = 8,
         epoch_steps: Optional[int] = None,
+        prefetch_factor: int = 2,
     ):
         self.dataset = dataset
         if epoch_steps:
@@ -731,6 +732,7 @@ class CustomWebDataloader(wds.WebLoader):
             shuffle=False,
             pin_memory=True,
             batch_size=None,
+            prefetch_factor=prefetch_factor,
         )
 
     def __len__(self):
