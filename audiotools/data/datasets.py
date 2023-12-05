@@ -584,12 +584,13 @@ def decode_audiosignal(
                 num_excerpts=num_excerpts,
                 max_excerpts=max_excerpts,
             )
-        except (RuntimeError, soundfile.LibsndfileError) as e:
+        except (RuntimeError, soundfile.LibsndfileError, ValueError) as e:
             if (
                 isinstance(e, soundfile.LibsndfileError)
                 or "The size of tensor a (5) must match the size of tensor b (6) at non-singleton dimension 1"
                 in str(e)
                 or "is empty!" in str(e)
+                or "array is too big" in str(e)
             ):
                 print(f"Error loading audio. Value: {key} Skipping...")
                 return None
