@@ -652,6 +652,7 @@ class CustomWebDataset(wds.WebDataset):
         urls: Union[str, Sequence[str]],
         batch_size: Optional[int] = None,
         shuffle: Optional[int] = None,
+        shuffle_initial: Optional[int] = 1_000,
         resampled: bool = True,  # use shardlists.ResampledShards
         duration: float = 5.0,
         loudness_cutoff: int = -40,
@@ -706,7 +707,7 @@ class CustomWebDataset(wds.WebDataset):
             self.map(_add_transform_args)
 
         if shuffle is not None:
-            self.shuffle(shuffle)
+            self.shuffle(shuffle, initial=shuffle_initial)
 
         if batch_size is not None:
             self.batched(batch_size, collation_fn=self.collate, partial=False)
