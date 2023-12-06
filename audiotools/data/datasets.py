@@ -593,7 +593,7 @@ def decode_audiosignal(
                 or "array is too big" in str(e)
             ):
                 print(f"Error loading audio. Value: {key} Skipping...")
-                return None
+                continue
             else:
                 raise e
 
