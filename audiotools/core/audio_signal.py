@@ -780,6 +780,11 @@ class AudioSignal(
         else:
             self.audio_data = self.audio_data.mean(1, keepdim=True)
         return self
+
+    def to_rand_mono(self):
+        selected_channel_idx = torch.randint(0, self.num_channels, ())
+        self.audio_data = self.audio_data[:, selected_channel_idx, :].unsqueeze(1)
+        return self
     
     def to_mid_side(self):
         """Converts audio data to mid/side format.

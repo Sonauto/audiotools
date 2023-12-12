@@ -560,6 +560,7 @@ def decode_audiosignal(
     sample_rate=44100,
     num_excerpts=50,
     max_excerpts=None,
+    random_mono_channel=False,
 ):
     assert offset is None
     for sample in data:
@@ -598,7 +599,10 @@ def decode_audiosignal(
                 raise e
 
         if num_channels == 1:
-            signals = signals.to_mono()
+            if random_mono_channel:
+                signals = signals.to_rand_mono()
+            else:
+                signals = signals.to_mono()
         signals = signals.resample(sample_rate)
 
         if signals.duration < duration:
@@ -663,6 +667,7 @@ class CustomWebDataset(wds.WebDataset):
         n_examples: int = 10_000_000,
         num_excerpts: int = 50,
         max_excerpts: Optional[int] = None,
+        random_mono_channel: bool = False,
         share_urls_between_workers: bool = False,
         **kwargs,
     ):
@@ -695,6 +700,7 @@ class CustomWebDataset(wds.WebDataset):
             state=state,
             num_excerpts=num_excerpts,
             max_excerpts=max_excerpts,
+            random_mono_channel=random_mono_channel,
         )
         self.decode(decode_json)
         self.compose(_decode_audiosignal)
