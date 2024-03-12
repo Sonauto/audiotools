@@ -614,7 +614,10 @@ def decode_audiosignal(
 
 def combine_json(data: Dict[str, Any]):
     audio_key = "signal"
-    json_key = [k for k in data.keys() if "json" in k][0]
+    try:
+        json_key = [k for k in data.keys() if "json" in k][0]
+    except IndexError:
+        return None
     data["json"] = data.pop(json_key)
     for k, v in data["json"].items():
         data[audio_key].metadata[k] = v
@@ -729,6 +732,7 @@ class CustomWebDataloader(wds.WebLoader):
         num_workers: int = 8,
         epoch_steps: Optional[int] = None,
         prefetch_factor: int = 2,
+        **kwargs,
     ):
         self.dataset = dataset
         if epoch_steps:
@@ -741,6 +745,7 @@ class CustomWebDataloader(wds.WebLoader):
             pin_memory=True,
             batch_size=None,
             prefetch_factor=prefetch_factor,
+            **kwargs,
         )
 
     def __len__(self):
