@@ -376,6 +376,7 @@ class Tracker:
                 if self.rank == 0:
                     nonlocal value_type, label
                     metrics = self.metrics[label][value_type]
+                    self.writer.add_scalar("trainer/global_step", self.step, self.step)
                     for k, v in metrics.items():
                         v = v() if isinstance(v, Mean) else v
                         if self.writer is not None:
