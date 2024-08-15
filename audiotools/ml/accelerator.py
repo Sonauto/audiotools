@@ -109,7 +109,7 @@ class Accelerator:  # pragma: no cover
         """Context manager for autocasting. Arguments
         go to ``torch.cuda.amp.autocast``.
         """
-        return torch.cuda.amp.autocast(self.amp, *args, **kwargs)
+        return torch.autocast("cuda", enabled=self.amp, *args, **kwargs)
 
     def backward(self, loss: torch.Tensor):
         """Backwards pass, after scaling the loss if ``amp`` is
