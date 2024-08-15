@@ -100,22 +100,8 @@ class BaseModel(nn.Module):
         str
             Path to saved model.
         """
-        sig = inspect.signature(self.__class__)
-        args = {}
-
-        for key, val in sig.parameters.items():
-            arg_val = val.default
-            if arg_val is not inspect.Parameter.empty:
-                args[key] = arg_val
-
-        # Look up attibutes in self, and if any of them are in args,
-        # overwrite them in args.
-        for attribute in dir(self):
-            if attribute in args:
-                args[attribute] = getattr(self, attribute)
-
         metadata = {} if metadata is None else metadata
-        metadata["kwargs"] = args
+        metadata["kwargs"] = getattr(self, "hparams", {})
         if not hasattr(self, "metadata"):
             self.metadata = {}
         self.metadata.update(metadata)
