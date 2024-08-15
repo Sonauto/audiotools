@@ -653,6 +653,12 @@ def custom_tarfile_samples(
 
 custom_tarfile_to_samples = wds.filters.pipelinefilter(custom_tarfile_samples)
 
+def run_transform(data: Dict[str, Any], transform=None):
+    signal = transform(
+        data["signal"].clone(), **data["transform_args"]
+    )
+    return {"signal": signal}
+
 class CustomWebDataset(wds.WebDataset):
     def __init__(
         self,
@@ -672,6 +678,7 @@ class CustomWebDataset(wds.WebDataset):
         max_excerpts: Optional[int] = None,
         random_mono_channel: bool = False,
         share_urls_between_workers: bool = False,
+        run_transform_in_dataset: bool = False,
         **kwargs,
     ):
         if share_urls_between_workers:
@@ -717,6 +724,10 @@ class CustomWebDataset(wds.WebDataset):
 
         if shuffle is not None:
             self.shuffle(shuffle, initial=shuffle_initial)
+
+        if transform is not None and run_transform_in_dataset:
+            _run_transform = partial(run_transform, transform=transform)
+            self.map(_run_transform)
 
         if batch_size is not None:
             self.batched(batch_size, collation_fn=self.collate, partial=False)
