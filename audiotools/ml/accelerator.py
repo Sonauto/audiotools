@@ -35,7 +35,7 @@ class Accelerator:  # pragma: no cover
         self.world_size = torch.cuda.device_count()
 
         self.use_ddp = self.world_size > 1 and local_rank is not None
-        self.use_dp = self.world_size > 1 and local_rank is None
+        self.use_dp = False  # self.world_size > 1 and local_rank is None
         self.device = "cpu" if self.world_size == 0 else "cuda"
 
         if self.use_ddp:
