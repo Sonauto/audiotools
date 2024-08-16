@@ -20,7 +20,7 @@ from rich.progress import TimeElapsedColumn
 from rich.progress import TimeRemainingColumn
 from rich.rule import Rule
 from rich.table import Table
-import wandb
+from torch.utils.tensorboard import SummaryWriter
 
 
 # This is here so that the history can be pickled.
@@ -162,7 +162,7 @@ class Tracker:
 
     def __init__(
         self,
-        log_to_wandb: bool = True,
+        writer: SummaryWriter = None,
         log_file: str = None,
         rank: int = 0,
         console_width: int = 100,
@@ -186,7 +186,7 @@ class Tracker:
         """
         self.metrics = {}
         self.history = {}
-        self.log_to_wandb = log_to_wandb
+        self.writer = writer
         self.rank = rank
         self.step = step
 
@@ -376,14 +376,13 @@ class Tracker:
                 if self.rank == 0:
                     nonlocal value_type, label
                     metrics = self.metrics[label][value_type]
-                    to_log = {"trainer/global_step": self.step}
+                    self.writer.add_scalar("trainer/global_step", self.step, self.step)
                     for k, v in metrics.items():
                         v = v() if isinstance(v, Mean) else v
-                        to_log[f"{k}/{label}"] = v
+                        if self.writer is not None:
+                            self.writer.add_scalar(f"{k}/{label}", v, self.step)
                         if label in self.history:
                             self.history[label][k].append(v)
-                    if self.log_to_wandb:
-                        wandb.log(to_log)
 
                     if label in self.history:
                         self.history[label]["step"].append(self.step)
