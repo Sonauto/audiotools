@@ -156,7 +156,7 @@ class BaseModel(nn.Module):
         try:
             model = cls._load_package(location, package_name=package_name)
         except:
-            model_dict = torch.load(location, "cpu")
+            model_dict = torch.load(location, "cpu", weights_only=False)
             metadata = model_dict["metadata"]
             metadata["kwargs"].update(kwargs)
 
