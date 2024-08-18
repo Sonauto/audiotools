@@ -130,6 +130,7 @@ class BaseModel(nn.Module):
         package_name: str = None,
         strict: bool = False,
         use_config_args: bool = False,
+        compile: bool = False,
         **kwargs,
     ):
         """Load model from a path. Tries first to load as a package, and if
@@ -170,6 +171,8 @@ class BaseModel(nn.Module):
                 model = cls()
             else:
                 model = cls(*args, **metadata["kwargs"])
+            if compile:
+                model = torch.compile(model, fullgraph=True, dynamic=False)
             model.load_state_dict(model_dict["state_dict"], strict=strict)
             model.metadata = metadata
 
