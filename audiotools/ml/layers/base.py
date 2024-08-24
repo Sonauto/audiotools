@@ -171,9 +171,12 @@ class BaseModel(nn.Module):
                 model = cls()
             else:
                 model = cls(*args, **metadata["kwargs"])
-            if compile:
+            model_being_loaded_is_compiled = any(x.startswith("_orig_mod.") for x in model_dict["state_dict"].keys())
+            if compile and model_being_loaded_is_compiled:
                 model = torch.compile(model, fullgraph=True, dynamic=False)
             model.load_state_dict(model_dict["state_dict"], strict=strict)
+            if compile and not model_being_loaded_is_compiled:
+                model = torch.compile(model, fullgraph=True, dynamic=False)
             model.metadata = metadata
 
         return model
