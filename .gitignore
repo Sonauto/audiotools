@@ -134,7 +134,7 @@ scratch/
 _codebraid/
 test.md
 test_out.md
-*.html
+# *.html
 *.exec.md
 .DS_Store
 
