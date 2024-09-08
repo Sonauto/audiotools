@@ -646,7 +646,7 @@ def custom_tarfile_samples(
     """
     streams = wds.tariterators.url_opener(src, handler=handler)
     files = wds.tariterators.tar_file_expander(
-        streams, handler=handler, select_files=select_files, rename_files=rename_files
+        streams, handler=wds.handlers.warn_and_continue, select_files=select_files, rename_files=rename_files
     )
     samples = wds.tariterators.group_by_keys(files, handler=handler, keys=lambda path: path.rsplit(".", 1))
     return samples
