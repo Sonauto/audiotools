@@ -157,6 +157,10 @@ class BaseModel(nn.Module):
         try:
             model = cls._load_package(location, package_name=package_name)
         except:
+            import torch
+            import inspect
+            from collections import OrderedDict
+            
             model_dict = torch.load(location, "cpu", weights_only=False)
             metadata = model_dict["metadata"]
             metadata["kwargs"].update(kwargs)
@@ -171,15 +175,35 @@ class BaseModel(nn.Module):
                 model = cls()
             else:
                 model = cls(*args, **metadata["kwargs"])
+
             model_being_loaded_is_compiled = any(x.startswith("_orig_mod.") for x in model_dict["state_dict"].keys())
             if compile and model_being_loaded_is_compiled:
                 model = torch.compile(model, fullgraph=True, dynamic=False)
-            model.load_state_dict(model_dict["state_dict"], strict=strict)
+
+            # Filter out mismatched dimensions
+            state_dict = model_dict["state_dict"]
+            model_state_dict = model.state_dict()
+            filtered_state_dict = OrderedDict()
+
+            for key, param in state_dict.items():
+                if key in model_state_dict:
+                    if model_state_dict[key].shape == param.shape:
+                        filtered_state_dict[key] = param
+                    else:
+                        print(f"Skipping parameter {key} due to size mismatch. "
+                              f"Checkpoint shape: {param.shape}, Model shape: {model_state_dict[key].shape}")
+                else:
+                    print(f"Skipping parameter {key} as it is not present in the model.")
+
+            # Load the filtered state dict
+            model.load_state_dict(filtered_state_dict, strict=False)
+
             if compile and not model_being_loaded_is_compiled:
                 model = torch.compile(model, fullgraph=True, dynamic=False)
             model.metadata = metadata
 
         return model
+
 
     def _save_package(self, path, intern=[], extern=[], mock=[], **kwargs):
         package_name = type(self).__name__
