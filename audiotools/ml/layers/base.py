@@ -3,10 +3,26 @@ import shutil
 import tempfile
 import typing
 from pathlib import Path
+from collections import OrderedDict
 
 import torch
 from torch import nn
 
+def remove_bad_shapes_from_state_dict(model, model_dict):
+    state_dict = model_dict["state_dict"]
+    model_state_dict = model.state_dict()
+    filtered_state_dict = OrderedDict()
+
+    for key, param in state_dict.items():
+        if key in model_state_dict:
+            if model_state_dict[key].shape == param.shape:
+                filtered_state_dict[key] = param
+            else:
+                print(f"Skipping parameter {key} due to size mismatch. "
+                        f"Checkpoint shape: {param.shape}, Model shape: {model_state_dict[key].shape}")
+        else:
+            print(f"Skipping parameter {key} as it is not present in the model.")
+    return filtered_state_dict
 
 class BaseModel(nn.Module):
     """This is a class that adds useful save/load functionality to a
@@ -131,6 +147,7 @@ class BaseModel(nn.Module):
         strict: bool = False,
         use_config_args: bool = False,
         compile: bool = False,
+        remove_bad_shapes: bool = False,
         **kwargs,
     ):
         """Load model from a path. Tries first to load as a package, and if
@@ -174,6 +191,10 @@ class BaseModel(nn.Module):
             model_being_loaded_is_compiled = any(x.startswith("_orig_mod.") for x in model_dict["state_dict"].keys())
             if compile and model_being_loaded_is_compiled:
                 model = torch.compile(model, fullgraph=True, dynamic=False)
+            
+            if remove_bad_shapes:
+                print("[WARNING] Skipping loading parameters with incorrect shapes from the state dict.")
+                model_dict["state_dict"] = remove_bad_shapes_from_state_dict(model, model_dict)
             model.load_state_dict(model_dict["state_dict"], strict=strict)
             if compile and not model_being_loaded_is_compiled:
                 model = torch.compile(model, fullgraph=True, dynamic=False)
